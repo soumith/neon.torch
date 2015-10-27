@@ -1,0 +1,44 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
+CMAKE_POLICY(VERSION 2.6)
+IF(LUAROCKS_PREFIX)
+  MESSAGE(STATUS "Installing Neon through Luarocks")
+  STRING(REGEX REPLACE "(.*)lib/luarocks/rocks.*" "\\1" CMAKE_INSTALL_PREFIX  "${LUAROCKS_PREFIX}")
+  MESSAGE(STATUS "Prefix inferred from Luarocks: ${CMAKE_INSTALL_PREFIX}")
+ENDIF()
+
+FIND_PACKAGE(Torch REQUIRED)
+FIND_PACKAGE(CUDA 7.5 REQUIRED)
+
+FILE(GLOB luasrc *.lua)
+SET(src-cuda "C_interface/nervana_c_api.cu")
+FILE(GLOB cubin cubin/*.cubin)
+
+LIST(APPEND CUDA_NVCC_FLAGS "-std=c++11 -Xcompiler")
+
+CUDA_ADD_LIBRARY(neon MODULE ${src-cuda})
+TARGET_LINK_LIBRARIES(neon ${CUDA_CUDA_LIBRARY} ${CUDA_CUDART_LIBRARY})
+
+
+INSTALL(
+  FILES
+  ${luasrc}
+  DESTINATION "${Torch_INSTALL_LUA_PATH_SUBDIR}/neon")
+
+### Torch packages supposes libraries prefix is "lib"
+SET_TARGET_PROPERTIES(neon PROPERTIES
+  PREFIX "lib"
+  IMPORT_PREFIX "lib")
+
+INSTALL(TARGETS neon
+  RUNTIME DESTINATION "${Torch_INSTALL_LUA_CPATH_SUBDIR}"
+  LIBRARY DESTINATION "${Torch_INSTALL_LUA_CPATH_SUBDIR}")
+
+INSTALL(
+  FILES
+  ${luasrc}
+  DESTINATION "${Torch_INSTALL_LUA_PATH_SUBDIR}/neon")
+
+INSTALL(
+  FILES
+  ${cubin}
+  DESTINATION "${Torch_INSTALL_LUA_PATH_SUBDIR}/neon/cubin")
